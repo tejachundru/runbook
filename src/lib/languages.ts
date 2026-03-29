@@ -104,3 +104,27 @@ export const LANGUAGES: Language[] = [
 
 export const getLang = (id: string): Language =>
   LANGUAGES.find((l) => l.id === id) ?? LANGUAGES[0];
+
+// ─── Enabled Languages ────────────────────────────────────────────────────────
+// Stored as a comma-separated setting key ("enabled_languages") in SQLite.
+// If no preference is saved, ALL languages are enabled.
+
+const ENABLED_KEY = "enabled_languages";
+
+/** Parse the stored setting into a Set of language IDs. */
+export function parseEnabledIds(raw: string | null): Set<string> {
+  if (!raw || raw.trim() === "") return new Set(LANGUAGES.map((l) => l.id));
+  const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return ids.length > 0 ? new Set(ids) : new Set(LANGUAGES.map((l) => l.id));
+}
+
+/** Serialise a Set of IDs back to the stored format. */
+export function serializeEnabledIds(ids: Set<string>): string {
+  return [...ids].join(",");
+}
+
+/** Return only the enabled Language objects. */
+export function filterEnabled(raw: string | null): Language[] {
+  const enabled = parseEnabledIds(raw);
+  return LANGUAGES.filter((l) => enabled.has(l.id));
+}

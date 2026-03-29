@@ -5,6 +5,9 @@
 # Runbook
 
 A minimal, native desktop notebook app for writing and running code.
+(Built with Tauri, Rust, and Next.js) - **Tested on macOS for now**
+
+JUST NOTES & CODE. 
 
 **Write markdown. Run code. Take notes. All in one place.**
 
@@ -58,7 +61,7 @@ Run code in TypeScript, Python, Rust, Bash, and JavaScript directly in your note
 
 ### ⚡ Native Performance
 - Built with **Tauri 2.0** — native webview, no bundled Chromium
-- ~15 MB bundle size vs 1+ GB with Electron
+- ~15 MB bundle size, minimal memory usage
 - Fast cold start, low memory usage
 - Data stored locally in **SQLite** — no cloud dependency
 
@@ -66,9 +69,7 @@ Run code in TypeScript, Python, Rust, Bash, and JavaScript directly in your note
 
 ## Screenshots
 
-> 📸 *Screenshots coming soon — build the app and take some! Place them in a `screenshots/` folder and reference here.*
-
-<!-- Uncomment when screenshots are ready:
+<!-- <!-- Uncomment when screenshots are ready: -->
 <div align="center">
   <img src="screenshots/home.png" alt="Home view with folders and notebooks" width="600" />
   <p><em>Home view — folders, recent notebooks, search</em></p>
@@ -78,11 +79,7 @@ Run code in TypeScript, Python, Rust, Bash, and JavaScript directly in your note
 
   <img src="screenshots/dark-mode.png" alt="Dark mode" width="600" />
   <p><em>Dark mode</em></p>
-
-  <img src="screenshots/search.png" alt="Search modal" width="600" />
-  <p><em>Search across all notebooks</em></p>
 </div>
--->
 
 ---
 
