@@ -2869,6 +2869,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "runbook"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dirs 5.0.1",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-shell",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "wait-timeout",
+]
+
+[[package]]
 name = "rusqlite"
 version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3637,26 +3657,6 @@ dependencies = [
  "syn 2.0.117",
  "tauri-codegen",
  "tauri-utils",
-]
-
-[[package]]
-name = "runbook"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dirs 5.0.1",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-shell",
- "tempfile",
- "tokio",
- "uuid",
- "wait-timeout",
 ]
 
 [[package]]
