@@ -19,6 +19,12 @@ pub struct ExecuteResult {
 // PATH resolution
 // ---------------------------------------------------------------------------
 
+#[cfg(windows)]
+const PATH_SEP: char = ';';
+#[cfg(not(windows))]
+const PATH_SEP: char = ':';
+
+#[cfg(not(windows))]
 fn login_shell_path() -> String {
     let mut base = {
         let result = Command::new("sh")
@@ -31,11 +37,7 @@ fn login_shell_path() -> String {
         match result {
             Ok(out) => {
                 let p = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                if !p.is_empty() {
-                    p
-                } else {
-                    default_path_dirs()
-                }
+                if !p.is_empty() { p } else { default_path_dirs() }
             }
             Err(_) => default_path_dirs(),
         }
@@ -48,7 +50,7 @@ fn login_shell_path() -> String {
         for suffix in &[".cargo/bin", ".bun/bin", "go/bin", ".local/bin"] {
             let p = home.join(suffix);
             if p.exists() {
-                base.push(':');
+                base.push(PATH_SEP);
                 base.push_str(&p.to_string_lossy());
             }
         }
@@ -57,6 +59,27 @@ fn login_shell_path() -> String {
     base
 }
 
+#[cfg(windows)]
+fn login_shell_path() -> String {
+    // On Windows, Tauri apps inherit PATH normally — no login shell needed.
+    let mut base = std::env::var("PATH").unwrap_or_else(|_| default_path_dirs());
+
+    // Append well-known runtime dirs that installers may add.
+    if let Some(profile) = std::env::var_os("USERPROFILE") {
+        let home = PathBuf::from(profile);
+        for suffix in &[".cargo\\bin", ".bun\\bin", "go\\bin", ".local\\bin"] {
+            let p = home.join(suffix);
+            if p.exists() {
+                base.push(PATH_SEP);
+                base.push_str(&p.to_string_lossy());
+            }
+        }
+    }
+
+    base
+}
+
+#[cfg(not(windows))]
 fn default_path_dirs() -> String {
     [
         "/usr/local/bin",
@@ -69,10 +92,29 @@ fn default_path_dirs() -> String {
     .join(":")
 }
 
+#[cfg(windows)]
+fn default_path_dirs() -> String {
+    [
+        "C:\\Windows\\System32",
+        "C:\\Windows",
+        "C:\\Program Files\\nodejs",
+        "C:\\Program Files\\Python312",
+        "C:\\Program Files\\Python311",
+        "C:\\Program Files\\Python310",
+    ]
+    .join(";")
+}
+
 fn resolve_binary(name: &str) -> Option<PathBuf> {
     let path_env = login_shell_path();
 
-    let out = Command::new("which")
+    // Use `where` on Windows, `which` on Unix
+    #[cfg(windows)]
+    let finder = "where";
+    #[cfg(not(windows))]
+    let finder = "which";
+
+    let out = Command::new(finder)
         .arg(name)
         .env("PATH", &path_env)
         .stdin(Stdio::null())
@@ -82,17 +124,27 @@ fn resolve_binary(name: &str) -> Option<PathBuf> {
         .ok()?;
 
     if out.status.success() {
-        let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if !s.is_empty() {
-            return Some(PathBuf::from(s));
+        // `where` on Windows may return multiple lines; take the first
+        let s = String::from_utf8_lossy(&out.stdout);
+        let first = s.lines().next().unwrap_or("").trim().to_string();
+        if !first.is_empty() {
+            return Some(PathBuf::from(first));
         }
     }
 
     // Walk PATH manually as a fallback
-    for dir in path_env.split(':') {
+    for dir in path_env.split(PATH_SEP) {
         let candidate = PathBuf::from(dir).join(name);
         if candidate.is_file() {
             return Some(candidate);
+        }
+        // On Windows, executables typically need the .exe extension
+        #[cfg(windows)]
+        {
+            let candidate_exe = PathBuf::from(dir).join(format!("{name}.exe"));
+            if candidate_exe.is_file() {
+                return Some(candidate_exe);
+            }
         }
     }
 
@@ -147,14 +199,18 @@ fn bash_runtime() -> Option<&'static PathBuf> {
 // ---------------------------------------------------------------------------
 
 fn missing_runtime(label: &str) -> ExecuteResult {
+    #[cfg(target_os = "macos")]
+    let tip = "Tip: on macOS, Tauri apps may not inherit your shell PATH — \
+               try launching from the terminal: `open /Applications/Runbook.app`";
+    #[cfg(target_os = "windows")]
+    let tip = "Tip: on Windows, make sure the runtime is on your system PATH \
+               (search \"environment variables\" in the Start menu).";
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let tip = "Tip: make sure the runtime is installed and available on your PATH.";
+
     ExecuteResult {
         stdout: String::new(),
-        stderr: format!(
-            "Runtime not found: {label}\n\
-             Make sure it is installed and on your PATH.\n\
-             Tip: on macOS, Tauri apps may not inherit your shell PATH — \
-             try launching from the terminal: `open /Applications/YourApp.app`"
-        ),
+        stderr: format!("Runtime not found: {label}\nMake sure it is installed and on your PATH.\n{tip}"),
         exit_code: 127,
     }
 }
@@ -342,6 +398,9 @@ pub fn execute_rust(code: &str, timeout_ms: u64) -> ExecuteResult {
         Err(e) => return ExecuteResult { stdout: String::new(), stderr: format!("Failed to create temp dir: {e}"), exit_code: 1 },
     };
     let src = tmp_dir.path().join("main.rs");
+    #[cfg(windows)]
+    let bin = tmp_dir.path().join("main.exe");
+    #[cfg(not(windows))]
     let bin = tmp_dir.path().join("main");
 
     if let Err(e) = std::fs::write(&src, code) {
