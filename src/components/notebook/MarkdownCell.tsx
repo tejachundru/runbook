@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -25,6 +26,138 @@ import {
 import DeleteCellDialog from "./DeleteCellDialog";
 import { cn } from "@/lib/utils";
 import type { Cell } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Slash-command autocomplete
+// ---------------------------------------------------------------------------
+
+function getCaretCoordinates(
+  textarea: HTMLTextAreaElement,
+): { top: number; left: number } {
+  const rect = textarea.getBoundingClientRect();
+  const computed = window.getComputedStyle(textarea);
+  const lineHeight = parseFloat(computed.lineHeight) || 22;
+  const paddingTop = parseFloat(computed.paddingTop) || 0;
+  const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+  const textBefore = textarea.value.substring(0, textarea.selectionStart);
+  const lines = textBefore.split("\n");
+  const currentLine = lines.length - 1;
+  const rawTop =
+    rect.top + paddingTop + currentLine * lineHeight - textarea.scrollTop + lineHeight + 4;
+  // Clamp so the dropdown doesn't go off-screen at the bottom
+  const dropdownHeight = 300;
+  const top =
+    rawTop + dropdownHeight > window.innerHeight
+      ? rect.top + paddingTop + currentLine * lineHeight - textarea.scrollTop - dropdownHeight
+      : rawTop;
+  return { top, left: rect.left + paddingLeft };
+}
+
+const SLASH_COMMANDS: Array<{
+  key: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  fn: (ta: HTMLTextAreaElement) => FormatResult;
+}> = [
+  {
+    key: "h1",
+    label: "Heading 1",
+    description: "Large section heading",
+    icon: <span className="font-mono text-[10px] font-bold">H1</span>,
+    fn: (ta) => toggleLinePrefix(ta, "# "),
+  },
+  {
+    key: "h2",
+    label: "Heading 2",
+    description: "Medium section heading",
+    icon: <span className="font-mono text-[10px] font-bold">H2</span>,
+    fn: (ta) => toggleLinePrefix(ta, "## "),
+  },
+  {
+    key: "h3",
+    label: "Heading 3",
+    description: "Small section heading",
+    icon: <span className="font-mono text-[10px] font-bold">H3</span>,
+    fn: (ta) => toggleLinePrefix(ta, "### "),
+  },
+  {
+    key: "bold",
+    label: "Bold",
+    description: "Make text bold",
+    icon: <Bold className="h-3 w-3" />,
+    fn: (ta) => wrapText(ta, "**", "**", "bold text"),
+  },
+  {
+    key: "italic",
+    label: "Italic",
+    description: "Make text italic",
+    icon: <Italic className="h-3 w-3" />,
+    fn: (ta) => wrapText(ta, "_", "_", "italic text"),
+  },
+  {
+    key: "strike",
+    label: "Strikethrough",
+    description: "Strike through text",
+    icon: <Strikethrough className="h-3 w-3" />,
+    fn: (ta) => wrapText(ta, "~~", "~~", "text"),
+  },
+  {
+    key: "code",
+    label: "Inline Code",
+    description: "Single-line code snippet",
+    icon: <Code className="h-3 w-3" />,
+    fn: (ta) => wrapText(ta, "`", "`", "code"),
+  },
+  {
+    key: "codeblock",
+    label: "Code Block",
+    description: "Multi-line code block",
+    icon: <Code2 className="h-3 w-3" />,
+    fn: (ta) => {
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const selected = ta.value.slice(start, end) || "// code here";
+      const before = "```\n";
+      const after = "\n```";
+      const value =
+        ta.value.slice(0, start) + before + selected + after + ta.value.slice(end);
+      return {
+        value,
+        newStart: start + before.length,
+        newEnd: start + before.length + selected.length,
+      };
+    },
+  },
+  {
+    key: "quote",
+    label: "Blockquote",
+    description: "Quote a section of text",
+    icon: <Quote className="h-3 w-3" />,
+    fn: (ta) => toggleLinePrefix(ta, "> "),
+  },
+  {
+    key: "ul",
+    label: "Bullet List",
+    description: "Unordered list",
+    icon: <List className="h-3 w-3" />,
+    fn: (ta) => toggleLinePrefix(ta, "- "),
+  },
+  {
+    key: "ol",
+    label: "Numbered List",
+    description: "Ordered list",
+    icon: <ListOrdered className="h-3 w-3" />,
+    fn: (ta) => toggleLinePrefix(ta, "1. "),
+  },
+  {
+    key: "link",
+    label: "Link",
+    description: "Insert a hyperlink",
+    icon: <Link2 className="h-3 w-3" />,
+    fn: (ta) => wrapText(ta, "[", "](url)", "link text"),
+  },
+];
 
 interface Props {
   cell: Cell;
@@ -197,6 +330,20 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Slash-command autocomplete state
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [caretPos, setCaretPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const filteredCommands = useMemo(() => {
+    if (slashQuery === null) return [];
+    if (slashQuery === "") return SLASH_COMMANDS;
+    const q = slashQuery.toLowerCase();
+    return SLASH_COMMANDS.filter(
+      (cmd) => cmd.key.startsWith(q) || cmd.label.toLowerCase().includes(q),
+    );
+  }, [slashQuery]);
+
   useAutoSave(content, (v) => onUpdate(cell.id, v));
 
   // Keep textarea height in sync with content
@@ -206,6 +353,36 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
     ta.style.height = "auto";
     ta.style.height = `${Math.max(ta.scrollHeight, 120)}px`;
   }, [content, editing]);
+
+  const applySuggestion = useCallback(
+    (cmd: (typeof SLASH_COMMANDS)[0]) => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const cursorPos = ta.selectionStart;
+      const textBefore = ta.value.substring(0, cursorPos);
+      // Find the slash that triggered the menu
+      const slashStart = textBefore.search(/\/[a-z0-9]*$/i);
+      if (slashStart === -1) { setSlashQuery(null); return; }
+      // Remove /query from the textarea DOM value so cmd.fn sees a clean state
+      const valueWithoutSlash =
+        ta.value.substring(0, slashStart) + ta.value.substring(cursorPos);
+      ta.value = valueWithoutSlash;
+      ta.setSelectionRange(slashStart, slashStart);
+      const result = cmd.fn(ta);
+      setContent(result.value);
+      setSlashQuery(null);
+      requestAnimationFrame(() => {
+        if (!textareaRef.current) return;
+        textareaRef.current.focus();
+        if (result.newCursorPos !== undefined) {
+          textareaRef.current.setSelectionRange(result.newCursorPos, result.newCursorPos);
+        } else if (result.newStart !== undefined) {
+          textareaRef.current.setSelectionRange(result.newStart, result.newEnd!);
+        }
+      });
+    },
+    [],
+  );
 
   const applyFormat = useCallback(
     (fn: (ta: HTMLTextAreaElement) => FormatResult) => {
@@ -236,11 +413,60 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
     [content],
   );
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newContent = e.target.value;
+      const cursorPos = e.target.selectionStart;
+      setContent(newContent);
+      // Detect /command trigger: slash at start of string or after newline/space
+      const textBefore = newContent.substring(0, cursorPos);
+      const match = textBefore.match(/(?:^|[\n ])(\/[a-z0-9]*)$/i);
+      if (match) {
+        const query = match[1].substring(1); // strip leading /
+        setSlashQuery(query);
+        setSuggestionIndex(0);
+        if (textareaRef.current) {
+          setCaretPos(getCaretCoordinates(textareaRef.current));
+        }
+      } else {
+        setSlashQuery(null);
+      }
+    },
+    [],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Escape" && content.trim()) {
-        setEditing(false);
-        return;
+      // Autocomplete navigation takes priority
+      if (slashQuery !== null && filteredCommands.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSuggestionIndex((i) => (i + 1) % filteredCommands.length);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSuggestionIndex(
+            (i) => (i - 1 + filteredCommands.length) % filteredCommands.length,
+          );
+          return;
+        }
+        if (e.key === "Enter" || e.key === "Tab") {
+          e.preventDefault();
+          applySuggestion(filteredCommands[suggestionIndex]);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        if (slashQuery !== null) {
+          e.preventDefault();
+          setSlashQuery(null);
+          return;
+        }
+        if (content.trim()) {
+          setEditing(false);
+          return;
+        }
       }
 
       const isMod = e.metaKey || e.ctrlKey;
@@ -258,7 +484,7 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
       else if (e.key === "s" && e.shiftKey) { e.preventDefault(); applyFormat(strikeItem.fn); }
       else if (e.key === "k") { e.preventDefault(); applyFormat(linkItem.fn); }
     },
-    [content, applyFormat],
+    [content, applyFormat, slashQuery, filteredCommands, suggestionIndex, applySuggestion],
   );
 
   const isEmpty = !content.trim();
@@ -346,7 +572,7 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           // biome-ignore lint/a11y/noAutofocus: focus is intentional when entering edit mode
           autoFocus
@@ -355,12 +581,58 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
           style={{ minHeight: "120px" }}
         />
 
-        {/* Footer: esc hint */}
-        <div className="flex items-center justify-end border-t border-border/20 px-4 py-1.5">
+        {/* Footer: esc hint + slash-command hint */}
+        <div className="flex items-center justify-between border-t border-border/20 px-4 py-1.5">
+          <span className="text-[10.5px] text-muted-foreground/30">
+            Type <kbd className="font-mono">/</kbd> for commands
+          </span>
           <span className="text-[10.5px] text-muted-foreground/30">
             <kbd className="font-mono">Esc</kbd> to preview
           </span>
         </div>
+
+        {/* Slash-command autocomplete dropdown */}
+        {slashQuery !== null &&
+          filteredCommands.length > 0 &&
+          typeof window !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed z-50 w-64 overflow-hidden rounded-lg border border-border bg-popover shadow-xl"
+              style={{ top: caretPos.top, left: caretPos.left }}
+            >
+              <p className="px-3 pb-1 pt-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/50">
+                Commands
+              </p>
+              <div className="max-h-60 overflow-y-auto p-1">
+                {filteredCommands.map((cmd, idx) => (
+                  <button
+                    key={cmd.key}
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent",
+                      idx === suggestionIndex && "bg-accent",
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // keep textarea focused
+                      applySuggestion(cmd);
+                    }}
+                    onMouseEnter={() => setSuggestionIndex(idx)}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted">
+                      {cmd.icon}
+                    </span>
+                    <div className="text-left">
+                      <div className="font-medium leading-none">{cmd.label}</div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground/60">
+                        {cmd.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>,
+            document.body,
+          )}
 
         <DeleteCellDialog
           open={showDelete}
