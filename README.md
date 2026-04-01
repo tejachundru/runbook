@@ -51,13 +51,22 @@ Run code in TypeScript, Python, Rust, Bash, and JavaScript directly in your note
 - **One-click restore** — pick a backup file and restore your full notebook state
 - Configure a **custom backup folder** in Settings to keep snapshots where you want them
 
+### ⚙️ Customizable Settings
+- **Theme preferences** — Light, Dark, or Dim theme with system sync
+- **Backup location** — choose where to store your backup files
+- **Language settings** — default runtime selection for new notebooks
+- All settings are stored locally and persist across sessions
+
 ### 📤 Import & Export
 - **Export** any notebook to clean Markdown or standalone HTML
 - **Import** existing Markdown files as new notebooks — cells are auto-detected from code blocks and prose sections
 
-### 🌙 Dark & Light Themes
-- Follows your system theme automatically, or toggle manually
-- Carefully crafted UI with **shadcn/ui** components that look great in both modes
+### 🌙 Theme Customization
+- **Three theme options:** Light, Dark, and Dim — choose what works best for your eyes
+- **System theme detection** — automatically follows your OS theme preferences, or override manually anytime
+- **Theme toggle** — quick access to switch themes from the header (light ☀️ / dark 🌙 / dim 🌑)
+- Carefully crafted UI with **shadcn/ui** components — every theme variant is polished and optimized for readability
+- **Per-component theming** — syntax highlighting in code cells adapts to your theme for better visibility
 
 ### ⚡ Native Performance
 - Built with **Tauri 2.0** — native webview, no bundled Chromium
