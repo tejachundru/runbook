@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -57,7 +58,9 @@ export default function RootLayout({
         >
           <TooltipProvider>
             <div className="flex h-screen w-full overflow-hidden">
-              <SidebarWrapper />
+              <Suspense fallback={null}>
+                <SidebarWrapper />
+              </Suspense>
               <div className="flex flex-col flex-1 overflow-hidden">
                 <AppShell>{children}</AppShell>
               </div>
