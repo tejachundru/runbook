@@ -147,7 +147,7 @@ export default function SearchModal({ open, onClose }: Props) {
             </div>
           ))}
           {!query && (
-            <div className="px-4 py-3 text-[12px] text-muted-foreground/40">
+            <div className="px-4 py-3 text-[12px] text-muted-foreground/60">
               Type to search across all cell content
             </div>
           )}

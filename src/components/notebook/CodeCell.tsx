@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useExecute } from "@/hooks/useExecute";
 import { getLang } from "@/lib/languages";
@@ -40,7 +40,7 @@ function writePersistedOutput(cellId: string, out: CellOutput | null) {
   }
 }
 
-export default function CodeCell({
+export default React.memo(function CodeCell({
   cell,
   onUpdate,
   onDelete,
@@ -159,7 +159,7 @@ export default function CodeCell({
             <button
               type="button"
               onClick={() => setStdinExpanded((v) => !v)}
-              className="flex w-full items-center gap-2 px-4 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+              className="flex w-full items-center gap-2 px-4 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-muted-foreground transition-colors"
             >
               <span>stdin</span>
               {stdin && <span className="font-normal normal-case text-muted-foreground/50 truncate max-w-[200px]">· {stdin.split("\n")[0]}</span>}
@@ -185,10 +185,10 @@ export default function CodeCell({
 
       {/* Collapsed summary row */}
       {collapsed && output && (
-        <div className="border-t border-border/30 px-5 py-1.5 font-mono text-[11px] text-muted-foreground/50">
+        <div className="border-t border-border/30 px-5 py-1.5 font-mono text-[11px] text-muted-foreground/70">
           exit {output.exitCode} · {output.durationMs}ms
           {output.stdout && (
-            <span className="ml-2 truncate text-foreground/40">
+            <span className="ml-2 truncate text-foreground/50">
               {output.stdout.slice(0, 80)}
             </span>
           )}
@@ -196,4 +196,4 @@ export default function CodeCell({
       )}
     </div>
   );
-}
+});

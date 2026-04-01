@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -15,6 +15,7 @@ import {
   Plus,
   Settings,
   Sun,
+  CloudMoon,
   Code2,
   MoreHorizontal,
   Edit3,
@@ -63,19 +64,17 @@ interface SidebarProps {
 
 // ─── Notebook row ─────────────────────────────────────────────────────────────
 
-function NoteRow({
+const NoteRow = React.memo(function NoteRow({
   notebook,
   depth = 0,
-  active = false,
+  activeNotebookId,
 }: {
   notebook: SidebarNotebook;
   depth?: number;
-  active?: boolean;
+  activeNotebookId: string | null;
 }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const isActive = active || (pathname === "/notebooks" && searchParams?.get("id") === notebook.id);
+  const isActive = activeNotebookId === notebook.id;
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(notebook.title);
 
@@ -178,16 +177,18 @@ function NoteRow({
       </DropdownMenu>
     </Link>
   );
-}
+});
 
 // ─── Folder row ───────────────────────────────────────────────────────────────
 
 function FolderRow({
   folder,
   depth = 0,
+  activeNotebookId,
 }: {
   folder: FolderTreeNode;
   depth?: number;
+  activeNotebookId: string | null;
 }) {
   const [open, setOpen] = useState(depth === 0);
 
@@ -241,15 +242,16 @@ function FolderRow({
               key={nb.id}
               notebook={nb as unknown as SidebarNotebook}
               depth={depth + 1}
+              activeNotebookId={activeNotebookId}
             />
           ))}
           {folder.children.map((child) => (
-            <FolderRow key={child.id} folder={child} depth={depth + 1} />
+            <FolderRow key={child.id} folder={child} depth={depth + 1} activeNotebookId={activeNotebookId} />
           ))}
           {folder.notebooks.length === 0 && folder.children.length === 0 && (
             <p
               style={{ paddingLeft: `${12 + (depth + 1) * 12}px` }}
-              className="py-1 text-[11px] italic text-sidebar-foreground/30"
+              className="py-1 text-[11px] italic text-sidebar-foreground/50"
             >
               No notes here
             </p>
@@ -307,9 +309,22 @@ export function AppSidebar({
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
+  const searchParams = useSearchParams();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Compute active notebook id once, pass down to NoteRows
+  const activeNotebookId = pathname === "/notebooks" ? (searchParams?.get("id") ?? null) : null;
+
+  const cycleTheme = () => {
+    const order = ["light", "dark", "dim"] as const;
+    const idx = order.indexOf(theme as (typeof order)[number]);
+    setTheme(order[(idx + 1) % order.length]);
+  };
+
+  const ThemeIcon = theme === "dim" ? CloudMoon : resolvedTheme === "dark" ? Sun : Moon;
+  const themeLabel = theme === "dim" ? "Light mode" : resolvedTheme === "dark" ? "Dim mode" : "Dark mode";
 
   if (collapsed) {
     return (
@@ -318,14 +333,14 @@ export function AppSidebar({
           variant="ghost"
           size="icon-sm"
           onClick={() => setCollapsed(false)}
-          className="rounded-md text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          className="rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
           <PanelLeft className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
-          className="rounded-md text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          className="rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
           asChild
         >
           <Link href="/">
@@ -335,7 +350,7 @@ export function AppSidebar({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="rounded-md text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          className="rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
           asChild
         >
           <Link href="/notebooks/new">
@@ -350,7 +365,7 @@ export function AppSidebar({
             "rounded-md hover:bg-sidebar-accent",
             pathname === "/settings"
               ? "bg-primary/10 text-primary"
-              : "text-sidebar-foreground/40 hover:text-sidebar-foreground",
+              : "text-sidebar-foreground/60 hover:text-sidebar-foreground",
           )}
           asChild
         >
@@ -362,15 +377,11 @@ export function AppSidebar({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="rounded-md text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            onClick={cycleTheme}
             aria-label="Toggle theme"
           >
-            {resolvedTheme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
+            <ThemeIcon className="h-4 w-4" />
           </Button>
         )}
       </aside>
@@ -392,7 +403,7 @@ export function AppSidebar({
         <Button
           variant="ghost"
           onClick={() => setCollapsed(true)}
-          className="h-6 w-6 rounded-md p-1 text-sidebar-foreground/30 hover:bg-sidebar-accent hover:text-sidebar-foreground/70"
+          className="h-6 w-6 rounded-md p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground/70"
         >
           <PanelLeftClose className="h-3.5 w-3.5" />
         </Button>
@@ -440,7 +451,7 @@ export function AppSidebar({
           <SidebarSection label="Recent" defaultOpen={true}>
             <div className="px-2 space-y-0.5">
               {recentNotebooks.slice(0, 5).map((nb) => (
-                <NoteRow key={nb.id} notebook={nb} />
+                <NoteRow key={nb.id} notebook={nb} activeNotebookId={activeNotebookId} />
               ))}
             </div>
           </SidebarSection>
@@ -467,7 +478,7 @@ export function AppSidebar({
           <div className="px-2 space-y-0.5">
             {folders.length > 0 ? (
               folders.map((folder) => (
-                <FolderRow key={folder.id} folder={folder} />
+                <FolderRow key={folder.id} folder={folder} activeNotebookId={activeNotebookId} />
               ))
             ) : (
               <p className="px-3 py-1 text-[11px] text-sidebar-foreground/30">
@@ -482,7 +493,7 @@ export function AppSidebar({
           <SidebarSection label="Unfiled" defaultOpen={false}>
             <div className="px-2 space-y-0.5">
               {rootNotebooks.map((nb) => (
-                <NoteRow key={nb.id} notebook={nb} />
+                <NoteRow key={nb.id} notebook={nb} activeNotebookId={activeNotebookId} />
               ))}
             </div>
           </SidebarSection>
@@ -491,7 +502,7 @@ export function AppSidebar({
 
       {/* Footer */}
       <div className="border-t border-sidebar-border/40 px-3 py-2.5 flex items-center justify-between">
-        <span className="text-[11px] text-sidebar-foreground/30">
+        <span className="text-[11px] text-sidebar-foreground/50">
           {recentNotebooks.length > 0
             ? `${recentNotebooks.length} recent`
             : "No notes yet"}
@@ -501,29 +512,19 @@ export function AppSidebar({
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                className="h-6 w-6 rounded p-0 text-sidebar-foreground/30 hover:bg-sidebar-accent hover:text-sidebar-foreground/70"
-                onClick={() =>
-                  setTheme(resolvedTheme === "dark" ? "light" : "dark")
-                }
+                className="h-6 w-6 rounded p-0 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground/70"
+                onClick={cycleTheme}
                 aria-label="Toggle theme"
               >
                 {mounted ? (
-                  resolvedTheme === "dark" ? (
-                    <Sun className="h-3.5 w-3.5" />
-                  ) : (
-                    <Moon className="h-3.5 w-3.5" />
-                  )
+                  <ThemeIcon className="h-3.5 w-3.5" />
                 ) : (
                   <div className="h-3.5 w-3.5" />
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
-              {mounted
-                ? resolvedTheme === "dark"
-                  ? "Light mode"
-                  : "Dark mode"
-                : "Toggle theme"}
+              {mounted ? themeLabel : "Toggle theme"}
             </TooltipContent>
           </Tooltip>
         </div>

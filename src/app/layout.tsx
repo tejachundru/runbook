@@ -50,9 +50,10 @@ export default function RootLayout({
       <body className="flex h-screen overflow-hidden">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
+          themes={["light", "dark", "dim"]}
+          enableSystem
           disableTransitionOnChange
-          enableSystem={false}
         >
           <TooltipProvider>
             <div className="flex h-screen w-full overflow-hidden">

@@ -221,7 +221,7 @@ export default function OutputPanel({ output, onClear, history = [] }: Props) {
       </Tabs>
       {showHistory && pastHistory.length > 0 && (
         <div className="border-t border-border/30">
-          <div className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">
+          <div className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
             History
           </div>
           <HistoryPanel history={pastHistory} />

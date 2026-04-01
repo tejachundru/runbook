@@ -417,7 +417,7 @@ export default function NotebookEditor({ notebook, initialCells, folderPath = []
           <div className="mt-2 flex flex-wrap items-center gap-3">
             {/* Tags */}
             <div className="flex items-center gap-1.5">
-              <Tag className="h-3 w-3 text-muted-foreground/30" />
+              <Tag className="h-3 w-3 text-muted-foreground/50" />
               {editingTags ? (
                 <input
                   ref={tagsInputRef}
@@ -453,7 +453,7 @@ export default function NotebookEditor({ notebook, initialCells, folderPath = []
                 <button
                   type="button"
                   onClick={() => setEditingTags(true)}
-                  className="text-[12px] text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                  className="text-[12px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                   title="Add tags"
                 >
                   Add tags…
@@ -464,7 +464,7 @@ export default function NotebookEditor({ notebook, initialCells, folderPath = []
             {/* Folder selector */}
             {folders.length > 0 && (
               <div className="flex items-center gap-1.5">
-                <FolderOpen className="h-3 w-3 text-muted-foreground/30" />
+                <FolderOpen className="h-3 w-3 text-muted-foreground/50" />
                 <Select
                   value={folderId ?? "__none__"}
                   onValueChange={(v) => saveFolder(v === "__none__" ? null : v)}
@@ -487,10 +487,10 @@ export default function NotebookEditor({ notebook, initialCells, folderPath = []
           </div>
 
           {/* Block count */}
-          <p className="mt-1.5 text-[12px] text-muted-foreground/40 tabular-nums">
+          <p className="mt-1.5 text-[12px] text-muted-foreground/60 tabular-nums">
             {cells.length === 0 ? "Empty" : `${cells.length} ${cells.length === 1 ? "block" : "blocks"}`}
             {collapsedCells.size > 0 && (
-              <span className="ml-2 text-muted-foreground/30">
+              <span className="ml-2 text-muted-foreground/50">
                 · {collapsedCells.size} collapsed
               </span>
             )}
@@ -564,7 +564,7 @@ export default function NotebookEditor({ notebook, initialCells, folderPath = []
         </div>
 
         {/* Keyboard shortcuts hint (fixed bottom-right) */}
-        <div className="fixed bottom-4 right-4 hidden rounded-lg border border-border/30 bg-background/80 px-3 py-2 text-[10px] text-muted-foreground/30 backdrop-blur-sm xl:block">
+        <div className="fixed bottom-4 right-4 hidden rounded-lg border border-border/30 bg-background/80 px-3 py-2 text-[10px] text-muted-foreground/50 backdrop-blur-sm xl:block">
           <span className="font-mono">j/k</span> navigate · <span className="font-mono">a/b</span> insert · <span className="font-mono">dd</span> delete · <span className="font-mono">c</span> collapse
         </div>
       </div>

@@ -24,6 +24,10 @@ function NotebookLoader() {
       return;
     }
 
+    // Reset state so the previous notebook doesn't flash while loading
+    setLoading(true);
+    setNotebook(null);
+
     let active = true;
 
     Promise.all([
@@ -65,6 +69,7 @@ function NotebookLoader() {
 
   return (
     <NotebookEditor
+      key={notebook.id}
       notebook={notebook}
       initialCells={cells}
       folderPath={folderPath}

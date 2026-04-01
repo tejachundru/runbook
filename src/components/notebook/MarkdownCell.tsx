@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -321,7 +321,7 @@ const TOOLBAR_GROUPS: Array<Array<{
   ],
 ];
 
-export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Props) {
+export default React.memo(function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Props) {
   const [content, setContent] = useState(cell.content);
   // Auto-enter edit mode for newly created (empty) blocks
   const [editing, setEditing] = useState(!cell.content.trim());
@@ -583,10 +583,10 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
 
         {/* Footer: esc hint + slash-command hint */}
         <div className="flex items-center justify-between border-t border-border/20 px-4 py-1.5">
-          <span className="text-[10.5px] text-muted-foreground/30">
+          <span className="text-[10.5px] text-muted-foreground/50">
             Type <kbd className="font-mono">/</kbd> for commands
           </span>
-          <span className="text-[10.5px] text-muted-foreground/30">
+          <span className="text-[10.5px] text-muted-foreground/50">
             <kbd className="font-mono">Esc</kbd> to preview
           </span>
         </div>
@@ -667,7 +667,7 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded text-muted-foreground/40 hover:bg-accent hover:text-foreground"
+              className="h-6 w-6 rounded text-muted-foreground/60 hover:bg-accent hover:text-foreground"
               onClick={(e) => { e.stopPropagation(); setEditing(true); }}
               tabIndex={-1}
               aria-label="Edit block"
@@ -682,7 +682,7 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive"
+              className="h-6 w-6 rounded text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive"
               onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
               tabIndex={-1}
               aria-label="Delete block"
@@ -695,7 +695,7 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
       </div>
 
       {isEmpty ? (
-        <p className="select-none text-sm italic text-muted-foreground/30">
+        <p className="select-none text-sm italic text-muted-foreground/50">
           Click to start writing…
         </p>
       ) : (
@@ -712,5 +712,5 @@ export default function MarkdownCell({ cell, onUpdate, onDelete, collapsed }: Pr
       />
     </div>
   );
-}
+});
 

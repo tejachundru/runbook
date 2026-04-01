@@ -91,7 +91,7 @@ export default function CellToolbar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 rounded-md text-muted-foreground/40 hover:text-foreground"
+                      className="h-6 w-6 rounded-md text-muted-foreground/60 hover:text-foreground"
                     >
                       <Braces className="h-3 w-3" />
                     </Button>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import type { Cell } from "@/lib/tauri";
 import { getLang } from "@/lib/languages";
@@ -14,6 +14,9 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
   const saveResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks pending delete timers so they can be cancelled on unmount
   const pendingDeleteTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  // Stable ref so callbacks always see latest cells without causing re-renders
+  const cellsRef = useRef(cells);
+  cellsRef.current = cells;
 
   useEffect(() => {
     const timers = pendingDeleteTimers.current;
@@ -35,31 +38,30 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
     emitSaveStatus("error");
   }
 
-  async function updateCell(cellId: string, content: string) {
+  const updateCell = useCallback(async (cellId: string, content: string) => {
     markSaving();
     try {
-      const cell = cells.find((c) => c.id === cellId);
+      const cell = cellsRef.current.find((c) => c.id === cellId);
       if (!cell) return;
       await api.updateCell(cellId, content, cell.language, cell.order);
       markSaved();
     } catch {
       markError();
     }
-  }
+  }, []);
 
-  async function updateCellLanguage(cellId: string, language: string) {
+  const updateCellLanguage = useCallback(async (cellId: string, language: string) => {
     setCells((prev) =>
       prev.map((c) => (c.id === cellId ? { ...c, language } : c)),
     );
-    const cell = cells.find((c) => c.id === cellId);
+    const cell = cellsRef.current.find((c) => c.id === cellId);
     if (!cell) return;
     await api.updateCell(cellId, cell.content, language, cell.order).catch(console.error);
-  }
+  }, []);
 
-  async function addCell(type: "code" | "markdown", language = "typescript") {
-    const order = cells.length;
+  const addCell = useCallback(async (type: "code" | "markdown", language = "typescript") => {
+    const order = cellsRef.current.length;
     const newCell = await api.createCell(notebookId, type, language, order);
-    // Set default code content after creation
     if (type === "code") {
       const defaultCode = getLang(language).defaultCode;
       await api.updateCell(newCell.id, defaultCode, language, order).catch(console.error);
@@ -67,14 +69,19 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
     }
     setCells((prev) => [...prev, newCell]);
     emitDataChanged();
-  }
+  }, [notebookId]);
 
-  async function insertCellAfter(
+  const reorderCellsSilent = useCallback(async (ordered: Cell[]) => {
+    const orderedIds = ordered.map((c) => c.id);
+    await api.reorderCells(notebookId, orderedIds).catch(console.error);
+  }, [notebookId]);
+
+  const insertCellAfter = useCallback(async (
     afterCellId: string,
     type: "code" | "markdown",
     language = "typescript",
-  ) {
-    const index = cells.findIndex((c) => c.id === afterCellId);
+  ) => {
+    const index = cellsRef.current.findIndex((c) => c.id === afterCellId);
     const order = index + 1;
     const newCell = await api.createCell(notebookId, type, language, order);
     if (type === "code") {
@@ -83,20 +90,21 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
       newCell.content = defaultCode;
     }
     setCells((prev) => {
+      const idx = prev.findIndex((c) => c.id === afterCellId);
       const next = [...prev];
-      next.splice(index + 1, 0, newCell);
+      next.splice(idx + 1, 0, newCell);
       reorderCellsSilent(next);
       return next;
     });
     emitDataChanged();
-  }
+  }, [notebookId, reorderCellsSilent]);
 
-  async function insertCellBefore(
+  const insertCellBefore = useCallback(async (
     beforeCellId: string,
     type: "code" | "markdown",
     language = "typescript",
-  ) {
-    const index = cells.findIndex((c) => c.id === beforeCellId);
+  ) => {
+    const index = cellsRef.current.findIndex((c) => c.id === beforeCellId);
     const order = Math.max(0, index);
     const newCell = await api.createCell(notebookId, type, language, order);
     if (type === "code") {
@@ -112,10 +120,10 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
       return next;
     });
     emitDataChanged();
-  }
+  }, [notebookId, reorderCellsSilent]);
 
-  function deleteCell(cellId: string) {
-    const snapshot = cells;
+  const deleteCell = useCallback((cellId: string) => {
+    const snapshot = cellsRef.current;
     const deletedCell = snapshot.find((c) => c.id === cellId);
     const deletedIndex = snapshot.findIndex((c) => c.id === cellId);
     if (!deletedCell) return;
@@ -123,7 +131,7 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
     setCells((prev) => prev.filter((c) => c.id !== cellId));
 
     let undone = false;
-    let deleteTimer: ReturnType<typeof setTimeout>; // assigned below
+    let deleteTimer: ReturnType<typeof setTimeout>;
 
     const toastId = toast("Block deleted", {
       duration: 5000,
@@ -142,7 +150,7 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
       },
     });
 
-     deleteTimer = setTimeout(async () => {
+    deleteTimer = setTimeout(async () => {
       pendingDeleteTimers.current.delete(deleteTimer);
       if (!undone) {
         await api.deleteCell(cellId).catch(console.error);
@@ -150,17 +158,12 @@ export function useNotebook(notebookId: string, initialCells: Cell[]) {
       }
     }, 5500);
     pendingDeleteTimers.current.add(deleteTimer);
-  }
+  }, []);
 
-  async function reorderCells(reordered: Cell[]) {
+  const reorderCells = useCallback(async (reordered: Cell[]) => {
     setCells(reordered);
     await reorderCellsSilent(reordered);
-  }
-
-  async function reorderCellsSilent(ordered: Cell[]) {
-    const orderedIds = ordered.map((c) => c.id);
-    await api.reorderCells(notebookId, orderedIds).catch(console.error);
-  }
+  }, [reorderCellsSilent]);
 
   return {
     cells,

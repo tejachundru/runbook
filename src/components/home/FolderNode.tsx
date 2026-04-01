@@ -98,7 +98,7 @@ export function FolderNode({
             </div>
             <div className="min-w-0">
               <h3 className="font-medium text-sm text-foreground truncate">{folder.name}</h3>
-              <p className="text-[11px] text-muted-foreground/60">
+              <p className="text-[11px] text-muted-foreground">
                 {notebookCount} {notebookCount === 1 ? "note" : "notes"}
                 {folder.children.length > 0 && ` · ${folder.children.length} folders`}
               </p>

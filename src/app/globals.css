@@ -4,34 +4,26 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant dim (&:is(.dim *));
 
 /* ─────────────────────────────────────────────────────────────────────────
    DESIGN RATIONALE
    ─────────────────────────────────────────────────────────────────────────
    This is a developer notebook: code and prose coexist on the same canvas.
 
-   Light mode  → premium document editor feel. Warm paper-white (#FAFAF9)
-                 surfaces, near-black ink, mauve accent for interactive chrome.
-                 Inspired by Notion / Bear — tactile, focused, editorial.
+   Three appearance modes:
+     Light → premium document editor. Warm paper-white, near-black ink.
+     Dark  → IDE-grade darkness. True warm-neutral near-black (NOT navy).
+     Dim   → softer dark for extended reading. Warm mid-dark surfaces.
 
-   Dark mode   → IDE-grade darkness. True warm-neutral near-black (NOT navy),
-                 so the mauve primary doesn't clash with the surface hue.
-                 Four depth levels: canvas → panels → code cells → popovers.
-                 Inspired by Neovim / Zed dark.
+   Accent colour system:
+     Two CSS custom properties (--a-h hue, --a-c chroma) drive every
+     brand / interactive colour. Swap them to re-theme the entire UI.
+     Six presets: mauve (default), blue, green, amber, rose, slate.
+     Set via `data-accent` attribute on <html>.
 
-   Typography  → Lato everywhere (consistent across both modes) for UI chrome.
-                 Merriweather for .notebook-prose body.
-                 Sans headings inside prose (editorial convention: sans head +
-                 serif body).
-                 JetBrains Mono for all code / editor surfaces.
-
-   Primary     → Warm mauve/pink. L=0.37 in light (AA on white), L=0.67 in
-                 dark (AA on near-black). Dark primary-foreground is dark,
-                 not white — prevents the "glowing button" effect.
-
-   Code cells  → Slightly cooler than the warm body surface. Code feels
-                 "machine", prose feels "human" — the hue contrast reinforces
-                 the mental model of two different writing modes.
+   Typography  → Lato (UI), Merriweather (prose), JetBrains Mono (code).
+   Code cells  → Slightly cooler hue than body for "machine vs human" feel.
    ───────────────────────────────────────────────────────────────────────── */
 
 /* ─── Theme token bridge ────────────────────────────────────────────────── */
@@ -113,59 +105,65 @@
   --color-shadow-color: var(--shadow-color);
 }
 
-/* ─── Light mode ─────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODE: LIGHT
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
+  /* ── Accent DNA ── override --a-h / --a-c to re-theme everything ─────── */
+  --a-h: 323;          /* accent hue  (mauve default) */
+  --a-c: 0.14;         /* accent chroma */
+
   /* Surfaces — warm paper white stack */
-  --background:         oklch(0.989 0.003 75);   /* warm paper — not clinical */
-  --foreground:         oklch(0.16  0.008 285);  /* warm near-black ink */
-  --card:               oklch(1.000 0.000 0);    /* pure white for elevated cards */
+  --background:         oklch(0.989 0.003 75);
+  --foreground:         oklch(0.16  0.008 285);
+  --card:               oklch(1.000 0.000 0);
   --card-foreground:    oklch(0.16  0.008 285);
   --popover:            oklch(1.000 0.000 0);
   --popover-foreground: oklch(0.16  0.008 285);
 
-  /* Brand */
-  --primary:            oklch(0.37  0.14  323);
+  /* Brand — derived from accent DNA */
+  --primary:            oklch(0.37  var(--a-c) var(--a-h));
   --primary-foreground: oklch(0.99  0.000 0);
 
   /* Tonal scale */
-  --secondary:            oklch(0.960 0.012 311);
-  --secondary-foreground: oklch(0.31  0.11  327);
-  --muted:                oklch(0.965 0.004 75);  /* warm muted surface */
-  --muted-foreground:     oklch(0.42  0.008 285); /* WCAG AA on white */
-  --accent:               oklch(0.900 0.025 323);
-  --accent-foreground:    oklch(0.31  0.11  327);
+  --secondary:            oklch(0.960 0.012 var(--a-h));
+  --secondary-foreground: oklch(0.31  0.11  var(--a-h));
+  --muted:                oklch(0.965 0.004 75);
+  --muted-foreground:     oklch(0.42  0.008 285);
+  --accent:               oklch(0.900 0.025 var(--a-h));
+  --accent-foreground:    oklch(0.31  0.11  var(--a-h));
   --destructive:          oklch(0.59  0.22  11);
   --destructive-foreground: oklch(0.99 0.000 0);
 
   /* Structure */
-  --border: oklch(0.88  0.004 75);   /* warm border, not cold */
+  --border: oklch(0.88  0.004 75);
   --input:  oklch(0.88  0.004 75);
-  --ring:   oklch(0.37  0.14  323);
+  --ring:   oklch(0.37  var(--a-c) var(--a-h));
 
-  /* Charts */
-  --chart-1: oklch(0.31  0.11  327);
-  --chart-2: oklch(0.37  0.14  323);
+  /* Charts — first two follow accent, rest are fixed utility colours */
+  --chart-1: oklch(0.31  0.11  var(--a-h));
+  --chart-2: oklch(0.37  var(--a-c) var(--a-h));
   --chart-3: oklch(0.59  0.22  11);
   --chart-4: oklch(0.77  0.13  223);
   --chart-5: oklch(0.69  0.14  160);
 
-  /* Sidebar — tinted panel, reads as distinct from background without a heavy border */
-  --sidebar:                     oklch(0.960 0.006 311);
+  /* Sidebar — subtly tinted toward accent hue */
+  --sidebar:                     oklch(0.960 0.006 var(--a-h));
   --sidebar-foreground:          oklch(0.16  0.008 285);
-  --sidebar-primary:             oklch(0.37  0.14  323);
+  --sidebar-primary:             oklch(0.37  var(--a-c) var(--a-h));
   --sidebar-primary-foreground:  oklch(0.99  0.000 0);
-  --sidebar-accent:              oklch(0.900 0.025 323);
-  --sidebar-accent-foreground:   oklch(0.31  0.11  327);
+  --sidebar-accent:              oklch(0.900 0.025 var(--a-h));
+  --sidebar-accent-foreground:   oklch(0.31  0.11  var(--a-h));
   --sidebar-border:              oklch(0.88  0.004 75);
-  --sidebar-ring:                oklch(0.37  0.14  323);
+  --sidebar-ring:                oklch(0.37  var(--a-c) var(--a-h));
 
-  /* Code surfaces — cooler hue (270) vs warm body (75) for visual distinction */
+  /* Code surfaces — cooler hue (270) for "machine vs human" contrast */
   --code-surface:        oklch(0.960 0.002 270);
   --code-surface-active: oklch(0.930 0.003 270);
   --output-surface:      oklch(0.975 0.002 270);
   --output-border:       oklch(0.860 0.004 270);
 
-  /* Typography — fonts loaded via next/font/google in layout.tsx */
+  /* Typography */
   --font-sans:  var(--font-lato), sans-serif;
   --font-serif: var(--font-merriweather), Georgia, serif;
   --font-mono:  var(--font-jetbrains-mono), "Fira Code", monospace;
@@ -180,15 +178,15 @@
   --shadow-opacity: 0.08;
 }
 
-/* ─── Dark mode ──────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODE: DARK — IDE-grade near-black with four depth levels
+   ═══════════════════════════════════════════════════════════════════════════ */
 .dark {
   color-scheme: dark;
 
-  /* Four-level surface depth stack (all warm-neutral, hue ≈ 285):
-       canvas  L=0.13  →  the app background
-       panels  L=0.17  →  sidebar, note list, cards
-       cells   L=0.11* →  code cells (*cooler hue 270, darker than canvas)
-       above   L=0.23  →  popovers, dropdowns — sit visually above everything */
+  --a-h: 327;
+  --a-c: 0.15;
+
   --background:         oklch(0.13  0.006 285);
   --foreground:         oklch(0.93  0.000 0);
   --card:               oklch(0.17  0.006 285);
@@ -196,59 +194,140 @@
   --popover:            oklch(0.23  0.006 285);
   --popover-foreground: oklch(0.93  0.000 0);
 
-  /* Brand — lightened for WCAG AA on dark bg */
-  --primary:            oklch(0.67  0.15  327);
-  --primary-foreground: oklch(0.12  0.006 285);  /* dark text on pink button */
+  --primary:            oklch(0.67  var(--a-c) var(--a-h));
+  --primary-foreground: oklch(0.12  0.006 285);
 
-  /* Tonal scale */
   --secondary:            oklch(0.22  0.005 285);
   --secondary-foreground: oklch(0.93  0.000 0);
   --muted:                oklch(0.20  0.005 285);
-  --muted-foreground:     oklch(0.60  0.000 0);  /* WCAG AA on dark bg */
-  --accent:               oklch(0.28  0.035 326);
+  --muted-foreground:     oklch(0.66  0.000 0);
+  --accent:               oklch(0.28  0.035 var(--a-h));
   --accent-foreground:    oklch(0.93  0.000 0);
   --destructive:          oklch(0.55  0.20  18);
   --destructive-foreground: oklch(0.97 0.000 0);
 
-  /* Structure */
   --border: oklch(0.26  0.005 285);
   --input:  oklch(0.26  0.005 285);
-  --ring:   oklch(0.67  0.15  327);
+  --ring:   oklch(0.67  var(--a-c) var(--a-h));
 
-  /* Charts */
-  --chart-1: oklch(0.67  0.15  327);
+  --chart-1: oklch(0.67  var(--a-c) var(--a-h));
   --chart-2: oklch(0.77  0.13  223);
   --chart-3: oklch(0.69  0.14  160);
   --chart-4: oklch(0.59  0.22  11);
   --chart-5: oklch(0.80  0.15  82);
 
-  /* Sidebar — one step lighter than canvas, reads as a panel */
   --sidebar:                     oklch(0.16  0.006 285);
   --sidebar-foreground:          oklch(0.93  0.000 0);
-  --sidebar-primary:             oklch(0.67  0.15  327);
+  --sidebar-primary:             oklch(0.67  var(--a-c) var(--a-h));
   --sidebar-primary-foreground:  oklch(0.12  0.006 285);
-  --sidebar-accent:              oklch(0.28  0.035 326);
+  --sidebar-accent:              oklch(0.28  0.035 var(--a-h));
   --sidebar-accent-foreground:   oklch(0.93  0.000 0);
   --sidebar-border:              oklch(0.22  0.005 285);
-  --sidebar-ring:                oklch(0.67  0.15  327);
+  --sidebar-ring:                oklch(0.67  var(--a-c) var(--a-h));
 
-  /* Code surfaces — darker than canvas, hue 270 (cool)
-     Creates a deliberate contrast: editing code feels like descending
-     into a focused execution environment */
   --code-surface:        oklch(0.11  0.004 270);
   --code-surface-active: oklch(0.14  0.004 270);
-  --output-surface:      oklch(0.095 0.003 270);  /* deepest: output panel */
+  --output-surface:      oklch(0.095 0.003 270);
   --output-border:       oklch(0.22  0.005 285);
 
-  /* Typography — same family as light mode, no flash on theme toggle */
   --font-sans:  var(--font-lato), sans-serif;
   --font-serif: var(--font-merriweather), Georgia, serif;
   --font-mono:  var(--font-jetbrains-mono), "Fira Code", monospace;
 
-  /* Shadow */
   --shadow-color:   oklch(0 0 0);
   --shadow-opacity: 0.35;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODE: DIM — softer dark for extended reading (GitHub-Dimmed inspired)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.dim {
+  color-scheme: dark;
+
+  --a-h: 325;
+  --a-c: 0.13;
+
+  /* Warm mid-dark surfaces — easier on the eyes than full dark */
+  --background:         oklch(0.22  0.005 75);
+  --foreground:         oklch(0.88  0.000 0);
+  --card:               oklch(0.25  0.005 75);
+  --card-foreground:    oklch(0.88  0.000 0);
+  --popover:            oklch(0.28  0.005 75);
+  --popover-foreground: oklch(0.88  0.000 0);
+
+  --primary:            oklch(0.64  var(--a-c) var(--a-h));
+  --primary-foreground: oklch(0.15  0.005 285);
+
+  --secondary:            oklch(0.28  0.004 75);
+  --secondary-foreground: oklch(0.88  0.000 0);
+  --muted:                oklch(0.26  0.004 75);
+  --muted-foreground:     oklch(0.63  0.000 0);
+  --accent:               oklch(0.32  0.030 var(--a-h));
+  --accent-foreground:    oklch(0.88  0.000 0);
+  --destructive:          oklch(0.55  0.18  18);
+  --destructive-foreground: oklch(0.97 0.000 0);
+
+  --border: oklch(0.31  0.004 75);
+  --input:  oklch(0.31  0.004 75);
+  --ring:   oklch(0.64  var(--a-c) var(--a-h));
+
+  --chart-1: oklch(0.64  var(--a-c) var(--a-h));
+  --chart-2: oklch(0.72  0.12  223);
+  --chart-3: oklch(0.64  0.12  160);
+  --chart-4: oklch(0.56  0.20  11);
+  --chart-5: oklch(0.75  0.13  82);
+
+  --sidebar:                     oklch(0.24  0.005 var(--a-h));
+  --sidebar-foreground:          oklch(0.88  0.000 0);
+  --sidebar-primary:             oklch(0.64  var(--a-c) var(--a-h));
+  --sidebar-primary-foreground:  oklch(0.15  0.005 285);
+  --sidebar-accent:              oklch(0.32  0.030 var(--a-h));
+  --sidebar-accent-foreground:   oklch(0.88  0.000 0);
+  --sidebar-border:              oklch(0.28  0.004 75);
+  --sidebar-ring:                oklch(0.64  var(--a-c) var(--a-h));
+
+  --code-surface:        oklch(0.19  0.003 270);
+  --code-surface-active: oklch(0.21  0.003 270);
+  --output-surface:      oklch(0.17  0.002 270);
+  --output-border:       oklch(0.28  0.004 285);
+
+  --font-sans:  var(--font-lato), sans-serif;
+  --font-serif: var(--font-merriweather), Georgia, serif;
+  --font-mono:  var(--font-jetbrains-mono), "Fira Code", monospace;
+
+  --shadow-color:   oklch(0 0 0);
+  --shadow-opacity: 0.25;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCENT COLOUR PRESETS
+   Change only --a-h (hue) and --a-c (chroma) — every derived token adapts.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Blue — focused, professional */
+:root[data-accent="blue"]           { --a-h: 250; --a-c: 0.16; }
+.dark[data-accent="blue"]           { --a-h: 250; --a-c: 0.16; }
+.dim[data-accent="blue"]            { --a-h: 250; --a-c: 0.15; }
+
+/* Green — calm, nature-inspired */
+:root[data-accent="green"]          { --a-h: 160; --a-c: 0.14; }
+.dark[data-accent="green"]          { --a-h: 160; --a-c: 0.14; }
+.dim[data-accent="green"]           { --a-h: 160; --a-c: 0.13; }
+
+/* Amber — warm, energetic */
+:root[data-accent="amber"]          { --a-h: 80;  --a-c: 0.16; }
+.dark[data-accent="amber"]          { --a-h: 80;  --a-c: 0.16; }
+.dim[data-accent="amber"]           { --a-h: 80;  --a-c: 0.15; }
+
+/* Rose — vibrant, modern */
+:root[data-accent="rose"]           { --a-h: 15;  --a-c: 0.18; }
+.dark[data-accent="rose"]           { --a-h: 15;  --a-c: 0.18; }
+.dim[data-accent="rose"]            { --a-h: 15;  --a-c: 0.17; }
+
+/* Slate — minimal, neutral */
+:root[data-accent="slate"]          { --a-h: 270; --a-c: 0.02; }
+.dark[data-accent="slate"]          { --a-h: 270; --a-c: 0.02; }
+.dim[data-accent="slate"]           { --a-h: 270; --a-c: 0.02; }
 
 /* ─── Base layer ─────────────────────────────────────────────────────────── */
 @layer base {
@@ -334,6 +413,12 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* ── Focus-visible ring — accent-aware ── */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 /* ─── Output panel ───────────────────────────────────────────────────────── */
@@ -389,11 +474,16 @@
     border: none !important;
     background-color: oklch(from var(--primary) l c h / 0.05) !important;
   }
+
+  /* Dim mode: slightly warmer Monaco tints */
+  .dim .monaco-editor .current-line {
+    background-color: oklch(from var(--primary) l c h / 0.07) !important;
+  }
 }
 
 /* ─── Notebook prose ─────────────────────────────────────────────────────── */
 /* Merriweather body + Lato headings = classic editorial convention.
-   Every value references a theme token — prose adapts to both modes. */
+   Every value references a theme token — prose adapts to all modes & accents. */
 .notebook-prose {
   font-family: var(--font-serif);
 
@@ -419,9 +509,18 @@
 .dark .notebook-prose {
   --tw-prose-body:          oklch(from var(--foreground) l c h / 0.88);
   --tw-prose-lead:          oklch(from var(--foreground) l c h / 0.82);
-  --tw-prose-links:         oklch(0.75  0.14  327);
+  --tw-prose-links:         oklch(0.75  var(--a-c) var(--a-h));
   --tw-prose-quote-borders: oklch(from var(--primary) l c h / 0.60);
   --tw-prose-bullets:       oklch(from var(--muted-foreground) l c h / 0.75);
+}
+
+/* Dim mode — slightly softer than dark */
+.dim .notebook-prose {
+  --tw-prose-body:          oklch(from var(--foreground) l c h / 0.85);
+  --tw-prose-lead:          oklch(from var(--foreground) l c h / 0.78);
+  --tw-prose-links:         oklch(0.70  var(--a-c) var(--a-h));
+  --tw-prose-quote-borders: oklch(from var(--primary) l c h / 0.55);
+  --tw-prose-bullets:       oklch(from var(--muted-foreground) l c h / 0.72);
 }
 
 /* Sans headings inside serif prose body — deliberate editorial contrast */

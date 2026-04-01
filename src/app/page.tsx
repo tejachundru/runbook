@@ -30,7 +30,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   return (
     <span className="text-sm tabular-nums">
       <span className="font-semibold text-foreground">{value}</span>
-      <span className="text-muted-foreground/60 ml-1 text-xs">{label}</span>
+      <span className="text-muted-foreground ml-1 text-xs">{label}</span>
     </span>
   );
 }
@@ -233,7 +233,7 @@ export default function HomePage() {
               <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
               <div className="flex items-center gap-4 mt-1 text-sm">
                 <Stat value={data.notebooks.length} label="notes" />
-                <span className="text-border">·</span>
+                <span className="text-muted-foreground/40">·</span>
                 <Stat value={data.folders.length} label="folders" />
               </div>
             </div>
@@ -440,7 +440,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="text-center py-12 border border-dashed border-border/60 rounded-xl bg-muted/20">
-                  <Folder className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <Folder className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No folders yet</p>
                   <CreateFolderDialog folders={folderOptions} />
                 </div>
@@ -449,7 +449,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Search className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+            <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground">No results found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               No notes match your search for &ldquo;{searchQuery}&rdquo;

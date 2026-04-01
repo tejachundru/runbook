@@ -159,7 +159,7 @@ function NotebookItemInner({
             <h3 className="font-medium text-sm text-foreground line-clamp-2 leading-snug">
               {notebook.title}
             </h3>
-            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground/60">
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Code2 className="h-3 w-3" />
                 {notebook.cellCount} cells

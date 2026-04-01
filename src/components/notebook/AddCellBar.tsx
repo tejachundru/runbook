@@ -75,7 +75,7 @@ export default function AddCellBar({ onAdd }: Props) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded-full border border-border/50 text-muted-foreground/40 hover:border-primary/40 hover:bg-primary/8 hover:text-primary transition-all"
+              className="h-6 w-6 rounded-full border border-border/50 text-muted-foreground/60 hover:border-primary/40 hover:bg-primary/8 hover:text-primary transition-all"
               aria-label="Add block"
             >
               <Plus className="h-3 w-3" />
